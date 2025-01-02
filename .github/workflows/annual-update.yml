@@ -3,7 +3,7 @@ name: Annual Update
 on:
   schedule:
     # Runs at 00:00 UTC on January 3rd
-    - cron: '0 0 3 1 *'
+    - cron: '0 0 4 1 *'
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
