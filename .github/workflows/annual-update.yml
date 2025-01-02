@@ -1,0 +1,41 @@
+name: Annual Update
+
+on:
+  schedule:
+    # Runs at 00:00 UTC on January 3rd
+    - cron: '0 0 3 1 *'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  update-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update submodule
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git submodule update --remote
+          git add .
+          git diff-index --quiet HEAD || git commit -m "chore: update submodule for year $(date +%Y)"
+          git push
+
+      - name: Get current year
+        id: year
+        run: echo "year=$(date +%Y)" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release 0.1.${{ steps.year.outputs.year }}
+          tag_name: v0.1.${{ steps.year.outputs.year }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
