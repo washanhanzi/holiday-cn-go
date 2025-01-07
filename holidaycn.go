@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/washanhanzi/holiday-cn-go/pkg/holiday"
+	"github.com/washanhanzi/holiday-cn-go/v2/pkg/holiday"
 )
 
 var cnLocation *time.Location
@@ -21,17 +21,18 @@ func init() {
 // IsNowHoliday checks if current time in China is a holiday
 func IsNowHoliday() (bool, string, error) {
 	now := time.Now().In(cnLocation)
-	return IsHoliday(now)
+	return IsRestDay(now)
 }
 
-// IsNowWorkday checks if current time in China is a workday
-func IsNowWorkday() (bool, error) {
+// IsNowRestDay checks if current time in China is a rest day (holiday or weekend)
+func IsNowRestDay() (bool, error) {
 	now := time.Now().In(cnLocation)
-	return IsWorkday(now)
+	isRest, _, err := IsRestDay(now)
+	return isRest, err
 }
 
-// IsHoliday checks if a given date is a holiday
-func IsHoliday(date time.Time) (bool, string, error) {
+// IsRestDay checks if a given date is either a holiday or weekend
+func IsRestDay(date time.Time) (bool, string, error) {
 	year := date.Year()
 
 	data := holiday.GetYearData(year)
@@ -50,9 +51,41 @@ func IsHoliday(date time.Time) (bool, string, error) {
 
 // IsWorkday checks if a given date is a workday
 func IsWorkday(date time.Time) (bool, error) {
-	isHoliday, _, err := IsHoliday(date)
+	isRestDay, _, err := IsRestDay(date)
 	if err != nil {
 		return false, err
 	}
-	return !isHoliday, nil
+	return !isRestDay, nil
+}
+
+// AfterWorkdays returns the next workday after counting the specified number of workdays from the start date
+// For example:
+// - If workdays=1, it counts one workday and returns the next workday after that
+// - If workdays=2, it counts two workdays and returns the next workday after that
+// Rest days (holidays and weekends) are skipped in the counting
+func AfterWorkdays(startDate time.Time, workdays int) (time.Time, error) {
+	if workdays < 0 {
+		return time.Time{}, fmt.Errorf("workdays must be non-negative, got %d", workdays)
+	}
+
+	currentDate := startDate
+	remainingWorkdays := workdays
+
+	for remainingWorkdays >= 0 {
+		// Move to next day
+		currentDate = currentDate.AddDate(0, 0, 1)
+		
+		// Check if it's a workday
+		isWorkday, err := IsWorkday(currentDate)
+		if err != nil {
+			return time.Time{}, err
+		}
+
+		// Only decrement remaining workdays if it's a workday
+		if isWorkday {
+			remainingWorkdays--
+		}
+	}
+
+	return currentDate, nil
 }
