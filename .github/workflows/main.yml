@@ -46,8 +46,8 @@ jobs:
         if: steps.update.outputs.updated == 'true'
         uses: softprops/action-gh-release@v1
         with:
-          name: Release 0.1.${{ steps.date.outputs.date }}
-          tag_name: v0.1.${{ steps.date.outputs.date }}
+          name: Release 0.2.${{ steps.date.outputs.date }}
+          tag_name: v0.2.${{ steps.date.outputs.date }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
