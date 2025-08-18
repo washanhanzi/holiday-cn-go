@@ -1,6 +1,0 @@
-# This file has been replaced by two separate workflows:
-# - update-submodule.yml: Updates the holiday-cn submodule daily
-# - publish-release.yml: Publishes releases when changes are pushed to release branch
-#
-# The separation allows for better control over the CI/CD pipeline and follows
-# the principle of single responsibility for each workflow.
