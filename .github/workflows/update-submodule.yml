@@ -1,0 +1,48 @@
+name: Update Submodule
+
+on:
+  schedule:
+    # Runs at 15:00 UTC (23:00 UTC+8) every day, 3 hours after upstream update
+    - cron: '0 15 * * *'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  update-submodule:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Update submodule and check for changes
+        run: |
+          git submodule update --remote
+          if git diff --quiet HEAD; then
+            echo "No changes detected in submodule"
+          else
+            # Check if the committed changes contain .json files
+            if git diff --name-only HEAD | grep -q '\.json$'; then
+              echo "JSON files detected in submodule changes"
+              git add .
+              git commit -m "chore: update submodule for $(date +%Y-%m-%d)"
+              git push origin main
+              
+              # Create or update release branch from main
+              git checkout -B release
+              git push origin release --force
+              echo "Pushed updates to release branch"
+            else
+              echo "No .json files in submodule changes, skipping publish"
+            fi
+          fi
