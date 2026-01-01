@@ -6,7 +6,46 @@ var Year2026Data map[string]Day
 
 // Init2026 initializes the holiday data for year 2026
 func Init2026() map[string]Day {
-	data := make(map[string]Day, 0)
+	data := make(map[string]Day, 39)
+	data["2026-01-01"] = Day{Name: "元旦", Date: "2026-01-01", IsOffDay: true}
+	data["2026-01-02"] = Day{Name: "元旦", Date: "2026-01-02", IsOffDay: true}
+	data["2026-01-03"] = Day{Name: "元旦", Date: "2026-01-03", IsOffDay: true}
+	data["2026-01-04"] = Day{Name: "元旦", Date: "2026-01-04", IsOffDay: false}
+	data["2026-02-14"] = Day{Name: "春节", Date: "2026-02-14", IsOffDay: false}
+	data["2026-02-15"] = Day{Name: "春节", Date: "2026-02-15", IsOffDay: true}
+	data["2026-02-16"] = Day{Name: "春节", Date: "2026-02-16", IsOffDay: true}
+	data["2026-02-17"] = Day{Name: "春节", Date: "2026-02-17", IsOffDay: true}
+	data["2026-02-18"] = Day{Name: "春节", Date: "2026-02-18", IsOffDay: true}
+	data["2026-02-19"] = Day{Name: "春节", Date: "2026-02-19", IsOffDay: true}
+	data["2026-02-20"] = Day{Name: "春节", Date: "2026-02-20", IsOffDay: true}
+	data["2026-02-21"] = Day{Name: "春节", Date: "2026-02-21", IsOffDay: true}
+	data["2026-02-22"] = Day{Name: "春节", Date: "2026-02-22", IsOffDay: true}
+	data["2026-02-23"] = Day{Name: "春节", Date: "2026-02-23", IsOffDay: true}
+	data["2026-02-28"] = Day{Name: "春节", Date: "2026-02-28", IsOffDay: false}
+	data["2026-04-04"] = Day{Name: "清明节", Date: "2026-04-04", IsOffDay: true}
+	data["2026-04-05"] = Day{Name: "清明节", Date: "2026-04-05", IsOffDay: true}
+	data["2026-04-06"] = Day{Name: "清明节", Date: "2026-04-06", IsOffDay: true}
+	data["2026-05-01"] = Day{Name: "劳动节", Date: "2026-05-01", IsOffDay: true}
+	data["2026-05-02"] = Day{Name: "劳动节", Date: "2026-05-02", IsOffDay: true}
+	data["2026-05-03"] = Day{Name: "劳动节", Date: "2026-05-03", IsOffDay: true}
+	data["2026-05-04"] = Day{Name: "劳动节", Date: "2026-05-04", IsOffDay: true}
+	data["2026-05-05"] = Day{Name: "劳动节", Date: "2026-05-05", IsOffDay: true}
+	data["2026-05-09"] = Day{Name: "劳动节", Date: "2026-05-09", IsOffDay: false}
+	data["2026-06-19"] = Day{Name: "端午节", Date: "2026-06-19", IsOffDay: true}
+	data["2026-06-20"] = Day{Name: "端午节", Date: "2026-06-20", IsOffDay: true}
+	data["2026-06-21"] = Day{Name: "端午节", Date: "2026-06-21", IsOffDay: true}
+	data["2026-09-20"] = Day{Name: "国庆节", Date: "2026-09-20", IsOffDay: false}
+	data["2026-09-25"] = Day{Name: "中秋节", Date: "2026-09-25", IsOffDay: true}
+	data["2026-09-26"] = Day{Name: "中秋节", Date: "2026-09-26", IsOffDay: true}
+	data["2026-09-27"] = Day{Name: "中秋节", Date: "2026-09-27", IsOffDay: true}
+	data["2026-10-01"] = Day{Name: "国庆节", Date: "2026-10-01", IsOffDay: true}
+	data["2026-10-02"] = Day{Name: "国庆节", Date: "2026-10-02", IsOffDay: true}
+	data["2026-10-03"] = Day{Name: "国庆节", Date: "2026-10-03", IsOffDay: true}
+	data["2026-10-04"] = Day{Name: "国庆节", Date: "2026-10-04", IsOffDay: true}
+	data["2026-10-05"] = Day{Name: "国庆节", Date: "2026-10-05", IsOffDay: true}
+	data["2026-10-06"] = Day{Name: "国庆节", Date: "2026-10-06", IsOffDay: true}
+	data["2026-10-07"] = Day{Name: "国庆节", Date: "2026-10-07", IsOffDay: true}
+	data["2026-10-10"] = Day{Name: "国庆节", Date: "2026-10-10", IsOffDay: false}
 	return data
 }
 
