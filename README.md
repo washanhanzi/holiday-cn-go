@@ -4,8 +4,9 @@ Go package for checking Chinese holidays. Data is sourced from [holiday-cn](http
 
 ## Go Version Support
 
-Requires Go 1.23.3 or newer. CI builds, tests, and vets the package with Go 1.23.3
-and the latest stable Go release. Release builds also use the latest stable Go.
+Requires Go 1.16 or newer. CI builds, tests, and vets the package with the latest
+patch releases of Go 1.16 and Go 1.18, and the latest stable Go release. Release
+builds also use the latest stable Go.
 
 ## Code Organization
 
