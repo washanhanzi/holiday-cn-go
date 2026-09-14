@@ -24,14 +24,14 @@ jobs:
       commit: ${{ steps.commit.outputs.sha }}
     steps:
       - name: Checkout main branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           submodules: true
           fetch-depth: 0
 
       - name: Set up minimum supported Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           check-latest: true

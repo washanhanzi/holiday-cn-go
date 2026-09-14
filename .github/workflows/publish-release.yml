@@ -28,7 +28,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout tested commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.commit || github.sha }}
           fetch-depth: 0
