@@ -8,6 +8,27 @@ Requires Go 1.16 or newer. CI builds, tests, and vets the package with the lates
 patch releases of Go 1.16 and Go 1.18, and the latest stable Go release. Release
 builds also use the latest stable Go.
 
+## Versioning
+
+The active release series is **v0.4**. Tags use `v0.4.YYYYMMDDHHMMSS` in UTC,
+for example `v0.4.20260914103045`. This date-based patch number allows multiple
+releases per day. Data and maintenance updates stay within v0.4; the project
+remains pre-1.0 and does not promise a stable API yet.
+
+The Go module path is `github.com/washanhanzi/holiday-cn-go`, without `/v2`.
+To migrate from the previously documented v2 module, remove `/v2` from imports
+and update the dependency:
+
+```bash
+go get github.com/washanhanzi/holiday-cn-go@latest
+go mod tidy
+```
+
+Existing tags remain unchanged. In particular, `v2.0.0` remains available to
+users of the old `/v2` import path. The earlier `v0.4.20260914` tag also
+contains that old module path and cannot be used as a release of the unsuffixed
+module; use a newer timestamped v0.4 release. Future automated releases use v0.4.
+
 ## Automatic Data Updates
 
 GitHub Actions checks upstream daily at **09:37 UTC** (17:37 Taiwan time,
@@ -21,9 +42,9 @@ before committing the submodule pointer and generated files to `main`.
 It then calls the test and release workflows directly, checking Go 1.16, Go 1.18,
 and latest stable before publishing the exact tested commit.
 
-New releases use `v2.0.0`, `v2.0.1`, and so on to match the module's `/v2`
-import path. Existing tags are preserved, and rerunning a release for an already
-tagged commit reuses its tag. The release workflow can also be run manually.
+The release workflow checks that the module path matches the v0.4 release series.
+Rerunning a release for an already tagged commit reuses its timestamp tag.
+The release workflow can also be run manually.
 It no longer needs a separate release branch or a personal access token.
 
 GitHub disables scheduled workflows in public repositories after 60 days without
@@ -51,7 +72,7 @@ This will:
 ## Usage
 
 ```go
-import "github.com/washanhanzi/holiday-cn-go/v2"
+import "github.com/washanhanzi/holiday-cn-go"
 
 func main() {
     // Check current time in China

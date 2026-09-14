@@ -1,3 +1,3 @@
-module github.com/washanhanzi/holiday-cn-go/v2
+module github.com/washanhanzi/holiday-cn-go
 
 go 1.16

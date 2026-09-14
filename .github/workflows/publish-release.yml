@@ -33,7 +33,7 @@ jobs:
           ref: ${{ inputs.commit || github.sha }}
           fetch-depth: 0
 
-      - name: Select release tag
+      - name: Validate module and select v0.4 release tag
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -54,3 +54,4 @@ jobs:
           tag_name: ${{ steps.release.outputs.tag }}
           target_commitish: ${{ inputs.commit || github.sha }}
           generate_release_notes: true
+          make_latest: true

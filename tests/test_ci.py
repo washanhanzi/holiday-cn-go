@@ -1,6 +1,7 @@
 """Exercise the real update script against an isolated Git submodule."""
 
 import importlib.util
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -143,25 +144,54 @@ class UpdateDataTests(unittest.TestCase):
 
 
 class ReleaseTagTests(unittest.TestCase):
-    def test_first_v2_release_ignores_legacy_and_prerelease_tags(self):
+    now = datetime(2026, 9, 14, 10, 30, 45, tzinfo=timezone.utc)
+
+    def test_v04_release_ignores_legacy_and_prerelease_tags(self):
         self.assertEqual(
-            release_tag.next_tag("v0.3.20260101\nv2.0.0-rc.1", ""), "v2.0.0"
+            release_tag.next_tag(
+                "v0.3.20260101\nv0.4.20260914\nv2.0.0\nv0.4.20260914120000-rc.1",
+                "", self.now,
+            ),
+            "v0.4.20260914103045",
         )
 
-    def test_patch_increment_is_numeric(self):
+    def test_same_second_collision_advances_to_next_second(self):
         self.assertEqual(
-            release_tag.next_tag("v2.0.9\nv2.0.10", ""), "v2.0.11"
+            release_tag.next_tag("v0.4.20260914103045", "", self.now),
+            "v0.4.20260914103046",
         )
 
-    def test_release_tracks_latest_minor(self):
+    def test_clock_skew_preserves_version_order_across_midnight(self):
         self.assertEqual(
-            release_tag.next_tag("v2.0.100\nv2.1.2", ""), "v2.1.3"
+            release_tag.next_tag("v0.4.20260914235959", "", self.now),
+            "v0.4.20260915000000",
         )
 
     def test_retry_reuses_tag_for_same_commit(self):
         self.assertEqual(
-            release_tag.next_tag("v2.0.0\nv2.0.1", "v2.0.0"), "v2.0.0"
+            release_tag.next_tag(
+                "v0.4.20260913120000\nv0.4.20260914103045",
+                "v0.4.20260913120000", self.now,
+            ),
+            "v0.4.20260913120000",
         )
+
+    def test_tags_use_utc(self):
+        self.assertEqual(
+            release_tag.next_tag(
+                "", "",
+                datetime(2026, 9, 14, 18, 30, 45, tzinfo=timezone(timedelta(hours=8))),
+            ),
+            "v0.4.20260914103045",
+        )
+
+    def test_module_path_must_match_release_series(self):
+        release_tag.validate_module(
+            "module github.com/washanhanzi/holiday-cn-go\n\ngo 1.16\n"
+        )
+        for module in ("github.com/washanhanzi/holiday-cn-go/v2", "example.com/other"):
+            with self.subTest(module=module), self.assertRaises(ValueError):
+                release_tag.validate_module(f"module {module}\n\ngo 1.16\n")
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/washanhanzi/holiday-cn-go/v2/pkg/holiday"
+	"github.com/washanhanzi/holiday-cn-go/pkg/holiday"
 )
 
 var cnLocation *time.Location
@@ -74,7 +74,7 @@ func AfterWorkdays(startDate time.Time, workdays int) (time.Time, error) {
 	for remainingWorkdays >= 0 {
 		// Move to next day
 		currentDate = currentDate.AddDate(0, 0, 1)
-		
+
 		// Check if it's a workday
 		isWorkday, err := IsWorkday(currentDate)
 		if err != nil {
