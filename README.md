@@ -2,6 +2,11 @@
 
 Go package for checking Chinese holidays. Data is sourced from [holiday-cn](https://github.com/NateScarlet/holiday-cn).
 
+## Go Version Support
+
+Requires Go 1.23.3 or newer. CI builds, tests, and vets the package with Go 1.23.3
+and the latest stable Go release. Release builds also use the latest stable Go.
+
 ## Code Organization
 
 - `holiday.go`: Main API for checking holidays and workdays
