@@ -115,23 +115,23 @@ func main() {
 	yearTpl := template.Must(template.New("year").Parse(yearTmpl))
 	for _, file := range files {
 		fileName := file.Name()
-		if !strings.HasSuffix(fileName, ".json") || 
-		   fileName == "schema.json" || 
-		   fileName == "renovate.json" ||
-		   strings.Contains(fileName, "scripts/") {
+		if !strings.HasSuffix(fileName, ".json") ||
+			fileName == "schema.json" ||
+			fileName == "renovate.json" ||
+			strings.Contains(fileName, "scripts/") {
 			continue
 		}
 
 		content, err := os.ReadFile(filepath.Join(dataDir, fileName))
 		if err != nil {
 			fmt.Printf("Error reading file %s: %v\n", fileName, err)
-			continue
+			os.Exit(1)
 		}
 
 		var schema Schema
 		if err := json.Unmarshal(content, &schema); err != nil {
 			fmt.Printf("Error unmarshaling file %s: %v\n", fileName, err)
-			continue
+			os.Exit(1)
 		}
 
 		years = append(years, schema.Year)
@@ -141,13 +141,13 @@ func main() {
 		f, err := os.Create(yearFile)
 		if err != nil {
 			fmt.Printf("Error creating year file %s: %v\n", yearFile, err)
-			continue
+			os.Exit(1)
 		}
 
 		if err := yearTpl.Execute(f, schema); err != nil {
 			fmt.Printf("Error executing year template for %d: %v\n", schema.Year, err)
 			f.Close()
-			continue
+			os.Exit(1)
 		}
 		f.Close()
 	}

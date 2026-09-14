@@ -1,58 +1,56 @@
 name: Publish Release
 
 on:
-  push:
-    branches:
-      - release
-  workflow_dispatch:  # Allow manual triggering
+  workflow_call:
+    inputs:
+      commit:
+        description: Exact commit containing the updated holiday data
+        required: true
+        type: string
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+    with:
+      ref: ${{ inputs.commit || github.sha }}
+
   publish:
+    needs: test
     runs-on: ubuntu-latest
+    concurrency:
+      group: holiday-data-release
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
-      - name: Checkout release branch
+      - name: Checkout tested commit
         uses: actions/checkout@v4
         with:
-          ref: release
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ inputs.commit || github.sha }}
           fetch-depth: 0
 
-      - name: Configure git
+      - name: Select release tag
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Get current date
-        id: date
-        run: echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 'stable'
-          check-latest: true
-          cache: false
-
-      - name: Build
-        run: go build -v ./...
-
-      - name: Run tests
-        run: go test -v ./...
+          tag=$(python3 scripts/release-tag.py)
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Create Release
+        if: steps.release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v3
         with:
-          name: Release 0.2.${{ steps.date.outputs.date }}
-          tag_name: v0.2.${{ steps.date.outputs.date }}
+          name: Release ${{ steps.release.outputs.tag }}
+          tag_name: ${{ steps.release.outputs.tag }}
+          target_commitish: ${{ inputs.commit || github.sha }}
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Rebase main branch onto release
-        run: |
-          git fetch origin main
-          git checkout main
-          git rebase release
-          git push origin main

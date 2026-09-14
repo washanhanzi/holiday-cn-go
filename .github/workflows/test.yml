@@ -4,6 +4,13 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to test
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -21,6 +28,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -37,3 +46,6 @@ jobs:
 
       - name: Vet
         run: go vet ./...
+
+      - name: Test CI automation
+        run: python3 -m unittest discover -s tests -v

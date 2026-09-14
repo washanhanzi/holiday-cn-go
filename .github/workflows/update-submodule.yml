@@ -2,47 +2,70 @@ name: Update Submodule
 
 on:
   schedule:
-    # Runs at 15:00 UTC (23:00 UTC+8) every day, 3 hours after upstream update
-    - cron: '0 15 * * *'
-  workflow_dispatch:  # Allow manual triggering
+    # 09:37 UTC: overnight in the continental US, away from the hourly rush.
+    # Picks up the previous day's upstream update at 12:00 UTC.
+    - cron: '37 9 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: holiday-data-update
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   update-submodule:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      changed: ${{ steps.update.outputs.changed }}
+      commit: ${{ steps.commit.outputs.sha }}
     steps:
       - name: Checkout main branch
         uses: actions/checkout@v4
         with:
           ref: main
           submodules: true
-          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Configure git
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+      - name: Set up minimum supported Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: false
 
-      - name: Update submodule and check for changes
+      - name: Update and regenerate holiday data
+        id: update
+        run: bash scripts/update-data.sh
+
+      - name: Verify generated data
+        if: steps.update.outputs.changed == 'true'
+        env:
+          GOTOOLCHAIN: local
         run: |
-          git submodule update --remote
-          if git diff --quiet HEAD; then
-            echo "No changes detected in submodule"
-          else
-            # Check if the committed changes contain .json files
-            if git diff --name-only HEAD | grep -q '\.json$'; then
-              echo "JSON files detected in submodule changes"
-              git add .
-              git commit -m "chore: update submodule for $(date +%Y-%m-%d)"
-              git push origin main
-              
-              # Create or update release branch from main
-              git checkout -B release
-              git push origin release --force
-              echo "Pushed updates to release branch"
-            else
-              echo "No .json files in submodule changes, skipping publish"
-            fi
-          fi
+          go build ./...
+          go test -race ./...
+          go vet ./...
+
+      - name: Commit and push updated data
+        if: steps.update.outputs.changed == 'true'
+        id: commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -- holiday-cn pkg/holiday
+          git commit -m "chore: update holiday data for $(date -u +%Y-%m-%d)"
+          git push origin HEAD:main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: update-submodule
+    if: needs.update-submodule.outputs.changed == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-release.yml
+    with:
+      commit: ${{ needs.update-submodule.outputs.commit }}
