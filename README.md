@@ -24,11 +24,6 @@ go get github.com/washanhanzi/holiday-cn-go@latest
 go mod tidy
 ```
 
-Existing tags remain unchanged. In particular, `v2.0.0` remains available to
-users of the old `/v2` import path. The earlier `v0.4.20260914` tag also
-contains that old module path and cannot be used as a release of the unsuffixed
-module; use a newer timestamped v0.4 release. Future automated releases use v0.4.
-
 ## Automatic Data Updates
 
 GitHub Actions checks upstream daily at **09:37 UTC** (17:37 Taiwan time,
