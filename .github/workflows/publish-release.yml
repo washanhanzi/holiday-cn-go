@@ -13,6 +13,7 @@ permissions:
   contents: read
 
 jobs:
+  # Test and publish the same commit, including when called by the data updater.
   test:
     uses: ./.github/workflows/test.yml
     with:
@@ -33,6 +34,7 @@ jobs:
           ref: ${{ inputs.commit || github.sha }}
           fetch-depth: 0
 
+      # Validate the module against v0.4 and reuse an existing tag on retries.
       - name: Validate module and select v0.4 release tag
         id: release
         env:

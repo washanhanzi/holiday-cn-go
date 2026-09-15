@@ -31,16 +31,17 @@ func IsNowRestDay() (bool, error) {
 	return isRest, err
 }
 
-// IsRestDay checks if a given date is either a holiday or weekend
+// IsRestDay checks if a given date is either a holiday or weekend.
+// Only years with source JSON files are supported; other years return an error,
+// even if their dates appear in a supported year's cross-year arrangements.
 func IsRestDay(date time.Time) (bool, string, error) {
 	year := date.Year()
+	dateStr := date.Format("2006-01-02")
 
 	data := holiday.GetYearData(year)
 	if data == nil {
 		return false, "", fmt.Errorf("no holiday data for year %d", year)
 	}
-
-	dateStr := date.Format("2006-01-02")
 	if day, exists := data[dateStr]; exists {
 		return day.IsOffDay, day.Name, nil
 	}

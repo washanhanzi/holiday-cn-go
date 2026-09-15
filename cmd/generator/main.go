@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
+	"time"
 )
 
 type Schema struct {
@@ -98,72 +100,93 @@ func main() {
 		fmt.Println("Usage: generator <data-dir> <output-dir>")
 		os.Exit(1)
 	}
-
-	dataDir := os.Args[1]
-	outputDir := os.Args[2]
-
-	// Read all JSON files
-	files, err := os.ReadDir(dataDir)
-	if err != nil {
-		fmt.Printf("Error reading directory: %v\n", err)
+	if err := generate(os.Args[1], os.Args[2]); err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
+}
 
-	years := make([]int, 0)
+func generate(dataDir, outputDir string) error {
+	files, err := os.ReadDir(dataDir)
+	if err != nil {
+		return fmt.Errorf("read data directory: %w", err)
+	}
 
-	// Generate year-specific files
-	yearTpl := template.Must(template.New("year").Parse(yearTmpl))
+	// Read each source once for the full build. Each generated map uses only
+	// its own arrangement and entries for its dates from the next year.
+	yearDays := make(map[int]map[string]Day)
 	for _, file := range files {
 		fileName := file.Name()
 		if !strings.HasSuffix(fileName, ".json") ||
-			fileName == "schema.json" ||
-			fileName == "renovate.json" ||
-			strings.Contains(fileName, "scripts/") {
+			fileName == "schema.json" || fileName == "renovate.json" || file.IsDir() {
 			continue
 		}
-
 		content, err := os.ReadFile(filepath.Join(dataDir, fileName))
 		if err != nil {
-			fmt.Printf("Error reading file %s: %v\n", fileName, err)
-			os.Exit(1)
+			return fmt.Errorf("read %s: %w", fileName, err)
 		}
-
 		var schema Schema
 		if err := json.Unmarshal(content, &schema); err != nil {
-			fmt.Printf("Error unmarshaling file %s: %v\n", fileName, err)
-			os.Exit(1)
+			return fmt.Errorf("decode %s: %w", fileName, err)
 		}
-
-		years = append(years, schema.Year)
-
-		// Generate year-specific file
-		yearFile := filepath.Join(outputDir, fmt.Sprintf("year_%d.go", schema.Year))
-		f, err := os.Create(yearFile)
-		if err != nil {
-			fmt.Printf("Error creating year file %s: %v\n", yearFile, err)
-			os.Exit(1)
+		data := make(map[string]Day, len(schema.Days))
+		for _, day := range schema.Days {
+			if _, err := time.Parse("2006-01-02", day.Date); err != nil {
+				return fmt.Errorf("invalid date in year %d: %w", schema.Year, err)
+			}
+			data[day.Date] = day
 		}
-
-		if err := yearTpl.Execute(f, schema); err != nil {
-			fmt.Printf("Error executing year template for %d: %v\n", schema.Year, err)
-			f.Close()
-			os.Exit(1)
-		}
-		f.Close()
+		yearDays[schema.Year] = data
 	}
 
-	// Generate main file
-	mainFile := filepath.Join(outputDir, "holiday.go")
-	f, err := os.Create(mainFile)
-	if err != nil {
-		fmt.Printf("Error creating main file: %v\n", err)
-		os.Exit(1)
+	years := make([]int, 0, len(yearDays))
+	for year := range yearDays {
+		years = append(years, year)
 	}
-	defer f.Close()
-
+	sort.Ints(years)
+	yearTpl := template.Must(template.New("year").Parse(yearTmpl))
+	for _, year := range years {
+		// Keep this year's original arrangement entries, including dates outside
+		// its calendar year, and import only dates in this year from year+1.
+		// For example, 2019's arrangements contain the 2018-12-29 make-up
+		// workday, so both generated year APIs will expose that record.
+		// The next year's entry wins on overlap. Previous years are ignored;
+		// if year+1 is absent, the original records remain unchanged.
+		// Merging before compilation lets runtime queries lazily load just
+		// the requested year through GetYearData.
+		data := yearDays[year]
+		datePrefix := fmt.Sprintf("%04d-", year)
+		for date, day := range yearDays[year+1] {
+			if strings.HasPrefix(date, datePrefix) {
+				data[date] = day
+			}
+		}
+		dates := make([]string, 0, len(data))
+		for date := range data {
+			dates = append(dates, date)
+		}
+		sort.Strings(dates)
+		days := make([]Day, 0, len(dates))
+		for _, date := range dates {
+			days = append(days, data[date])
+		}
+		path := filepath.Join(outputDir, fmt.Sprintf("year_%d.go", year))
+		if err := writeGeneratedFile(path, yearTpl, Schema{Year: year, Days: days}); err != nil {
+			return err
+		}
+	}
 	mainTpl := template.Must(template.New("main").Parse(mainTmpl))
-	if err := mainTpl.Execute(f, struct{ Years []int }{years}); err != nil {
-		fmt.Printf("Error executing main template: %v\n", err)
-		os.Exit(1)
+	return writeGeneratedFile(filepath.Join(outputDir, "holiday.go"), mainTpl, struct{ Years []int }{years})
+}
+
+func writeGeneratedFile(path string, tmpl *template.Template, data interface{}) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("create %s: %w", path, err)
 	}
+	if err := tmpl.Execute(f, data); err != nil {
+		f.Close()
+		return fmt.Errorf("generate %s: %w", path, err)
+	}
+	return f.Close()
 }

@@ -4,9 +4,7 @@ Go package for checking Chinese holidays. Data is sourced from [holiday-cn](http
 
 ## Go Version Support
 
-Requires Go 1.16 or newer. CI builds, tests, and vets the package with the latest
-patch releases of Go 1.16 and Go 1.18, and the latest stable Go release. Release
-builds also use the latest stable Go.
+Requires Go 1.16 or newer.
 
 ## Versioning
 
@@ -15,40 +13,13 @@ for example `v0.4.20260914103045`. This date-based patch number allows multiple
 releases per day. Data and maintenance updates stay within v0.4; the project
 remains pre-1.0 and does not promise a stable API yet.
 
-The Go module path is `github.com/washanhanzi/holiday-cn-go`, without `/v2`.
-To migrate from the previously documented v2 module, remove `/v2` from imports
-and update the dependency:
-
-```bash
-go get github.com/washanhanzi/holiday-cn-go@latest
-go mod tidy
-```
-
 ## Automatic Data Updates
 
-GitHub Actions checks upstream daily at **09:37 UTC** (17:37 Taiwan time,
-01:37–02:37 Pacific, 04:37–05:37 Eastern depending on daylight saving time).
-The schedule avoids the start of the hour and picks up the previous day's
-upstream update at 12:00 UTC.
-
-The update workflow compares year JSON files inside the submodule and regenerates
-the Go data. If the generated data changes, it verifies the minimum Go version
-before committing the submodule pointer and generated files to `main`.
-It then calls the test and release workflows directly, checking Go 1.16, Go 1.18,
-and latest stable before publishing the exact tested commit.
-
-The release workflow checks that the module path matches the v0.4 release series.
-Rerunning a release for an already tagged commit reuses its timestamp tag.
-The release workflow can also be run manually.
-It no longer needs a separate release branch or a personal access token.
-
-GitHub disables scheduled workflows in public repositories after 60 days without
-repository activity. If this happens, enable **Update Submodule** in the Actions
-tab. Manual runs are available for checking an upstream change immediately.
+Holiday data is updated automatically each day.
 
 ## Code Organization
 
-- `holiday.go`: Main API for checking holidays and workdays
+- `holidaycn.go`: Main API for checking holidays and workdays
 - `pkg/holiday/*.go`: Generated code containing holiday data and initialization
 
 ## Generate Code
@@ -58,11 +29,6 @@ To generate the holiday data code:
 ```bash
 go run cmd/generator/main.go holiday-cn pkg/holiday
 ```
-
-This will:
-1. Read the JSON files from the `holiday-cn` submodule
-2. Generate year-specific Go files in the `pkg/holiday` directory
-3. Generate `holiday.go` with data structures and initialization code
 
 ## Usage
 
@@ -116,6 +82,7 @@ func main() {
     fmt.Printf("Next workday after counting 2 workdays from %s is %s\n",
         date.Format("2006-01-02"), nextWorkday.Format("2006-01-02"))
 }
+```
 
 ## Functions
 

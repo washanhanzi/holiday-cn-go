@@ -6,7 +6,7 @@ var Year2022Data map[string]Day
 
 // Init2022 initializes the holiday data for year 2022
 func Init2022() map[string]Day {
-	data := make(map[string]Day, 38)
+	data := make(map[string]Day, 39)
 	data["2022-01-01"] = Day{Name: "元旦", Date: "2022-01-01", IsOffDay: true}
 	data["2022-01-02"] = Day{Name: "元旦", Date: "2022-01-02", IsOffDay: true}
 	data["2022-01-03"] = Day{Name: "元旦", Date: "2022-01-03", IsOffDay: true}
@@ -45,6 +45,7 @@ func Init2022() map[string]Day {
 	data["2022-10-07"] = Day{Name: "国庆节", Date: "2022-10-07", IsOffDay: true}
 	data["2022-10-08"] = Day{Name: "国庆节", Date: "2022-10-08", IsOffDay: false}
 	data["2022-10-09"] = Day{Name: "国庆节", Date: "2022-10-09", IsOffDay: false}
+	data["2022-12-31"] = Day{Name: "元旦", Date: "2022-12-31", IsOffDay: true}
 	return data
 }
 

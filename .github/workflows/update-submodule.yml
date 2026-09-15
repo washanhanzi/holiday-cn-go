@@ -1,6 +1,8 @@
 name: Update Submodule
 
 on:
+  # If GitHub disables this schedule after repository inactivity, re-enable
+  # Update Submodule in the Actions tab; workflow_dispatch allows manual runs.
   schedule:
     # 09:37 UTC: overnight in the continental US, away from the hourly rush.
     # Picks up the previous day's upstream update at 12:00 UTC.
@@ -61,6 +63,8 @@ jobs:
           git push origin HEAD:main
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+  # Call publishing directly so the bot-created commit is tested and released
+  # without relying on a push event to trigger another workflow.
   publish:
     needs: update-submodule
     if: needs.update-submodule.outputs.changed == 'true'

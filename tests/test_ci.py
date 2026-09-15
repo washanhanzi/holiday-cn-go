@@ -69,10 +69,11 @@ class UpdateDataTests(unittest.TestCase):
             self.repo, "git", "submodule", "add", str(self.upstream), "holiday-cn"
         )
         shutil.copy2(ROOT / "go.mod", self.repo / "go.mod")
+        shutil.copy2(ROOT / "holidaycn.go", self.repo / "holidaycn.go")
         shutil.copytree(ROOT / "cmd", self.repo / "cmd")
         (self.repo / "pkg/holiday").mkdir(parents=True)
         self.command(
-            self.repo, "go", "run", "./cmd/generator", "holiday-cn", "pkg/holiday"
+            self.repo, "go", "run", "./cmd/generator", "holiday-cn", "pkg/holiday",
         )
         self.commit(self.repo)
 
@@ -88,8 +89,26 @@ class UpdateDataTests(unittest.TestCase):
 
     def generated_diff(self):
         return self.command(
-            self.repo, "git", "diff", "--name-only", "HEAD", "--", "pkg/holiday"
+            self.repo, "git", "diff", "--name-only", "HEAD", "--", "pkg/holiday",
         ).stdout
+
+    def assert_cross_year_query(self, off, name):
+        (self.repo / "lookup_test.go").write_text(f'''package holidaycn
+
+import (
+    "testing"
+    "time"
+)
+
+func TestUpdatedLookup(t *testing.T) {{
+    date := time.Date(2024, 12, 28, 0, 0, 0, 0, time.UTC)
+    off, name, err := IsRestDay(date)
+    if err != nil || off != {str(off).lower()} || name != {json.dumps(name)} {{
+        t.Fatalf("unexpected result: (%v, %q, %v)", off, name, err)
+    }}
+}}
+''')
+        self.command(self.repo, "go", "test", ".")
 
     def test_no_upstream_changes(self):
         _, changed = self.update()
@@ -121,6 +140,39 @@ class UpdateDataTests(unittest.TestCase):
         year_file.write_text(json.dumps(data))
         self.commit(self.upstream)
         _, changed = self.update()
+        self.assertEqual(changed, "false")
+        self.assertEqual(self.generated_diff(), "")
+
+    def test_cross_year_lookup_is_added_and_removed(self):
+        self.write_year(year=2024)
+        year_file = self.upstream / "2025.json"
+        data = json.loads(year_file.read_text())
+        data["days"].append({
+            "date": "2024-12-28", "name": "Makeup day", "isOffDay": False,
+        })
+        year_file.write_text(json.dumps(data))
+        self.commit(self.upstream)
+        _, changed = self.update()
+        self.assertEqual(changed, "true")
+        self.assertIn("pkg/holiday/year_2024.go", self.generated_diff())
+        self.assert_cross_year_query(False, "Makeup day")
+        self.commit(self.repo)
+
+        (self.upstream / "2025.json").unlink()
+        self.commit(self.upstream)
+        _, changed = self.update()
+        self.assertEqual(changed, "true")
+        self.assertIn("pkg/holiday/year_2024.go", self.generated_diff())
+        self.assert_cross_year_query(True, "")
+
+    def test_invalid_date_preserves_generated_files(self):
+        year_file = self.upstream / "2025.json"
+        data = json.loads(year_file.read_text())
+        data["days"][0]["date"] = "2025-02-30"
+        year_file.write_text(json.dumps(data))
+        self.commit(self.upstream)
+        result, changed = self.update(check=False)
+        self.assertNotEqual(result.returncode, 0)
         self.assertEqual(changed, "false")
         self.assertEqual(self.generated_diff(), "")
 

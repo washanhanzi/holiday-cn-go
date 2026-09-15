@@ -6,7 +6,7 @@ var Year2011Data map[string]Day
 
 // Init2011 initializes the holiday data for year 2011
 func Init2011() map[string]Day {
-	data := make(map[string]Day, 34)
+	data := make(map[string]Day, 35)
 	data["2011-01-01"] = Day{Name: "元旦", Date: "2011-01-01", IsOffDay: true}
 	data["2011-01-02"] = Day{Name: "元旦", Date: "2011-01-02", IsOffDay: true}
 	data["2011-01-03"] = Day{Name: "元旦", Date: "2011-01-03", IsOffDay: true}
@@ -41,6 +41,7 @@ func Init2011() map[string]Day {
 	data["2011-10-07"] = Day{Name: "国庆节", Date: "2011-10-07", IsOffDay: true}
 	data["2011-10-08"] = Day{Name: "国庆节", Date: "2011-10-08", IsOffDay: false}
 	data["2011-10-09"] = Day{Name: "国庆节", Date: "2011-10-09", IsOffDay: false}
+	data["2011-12-31"] = Day{Name: "元旦", Date: "2011-12-31", IsOffDay: false}
 	return data
 }
 
