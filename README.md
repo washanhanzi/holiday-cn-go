@@ -8,10 +8,8 @@ Requires Go 1.16 or newer.
 
 ## Versioning
 
-The active release series is **v0.4**. Tags use `v0.4.YYYYMMDDHHMMSS` in UTC,
-for example `v0.4.20260914103045`. This date-based patch number allows multiple
-releases per day. Data and maintenance updates stay within v0.4; the project
-remains pre-1.0 and does not promise a stable API yet.
+Release tags use a UTC timestamp, such as `v0.4.20260914103045`
+(September 14, 2026 at 10:30:45 UTC).
 
 ## Automatic Data Updates
 
