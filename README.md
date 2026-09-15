@@ -8,10 +8,8 @@ Requires Go 1.16 or newer.
 
 ## Versioning
 
-The active release series is **v0.4**. Tags use `v0.4.YYYYMMDDHHMMSS` in UTC,
-for example `v0.4.20260914103045`. This date-based patch number allows multiple
-releases per day. Data and maintenance updates stay within v0.4; the project
-remains pre-1.0 and does not promise a stable API yet.
+Release tags use a UTC timestamp, such as `v0.4.20260914103045`
+(September 14, 2026 at 10:30:45 UTC).
 
 ## Automatic Data Updates
 
@@ -56,6 +54,13 @@ func main() {
 
     // Check a specific date
     date := time.Date(2024, 2, 10, 0, 0, 0, 0, time.UTC)
+    day, err := holidaycn.CheckHoliday(date)
+    if err != nil {
+        log.Fatal(err)
+    }
+    if day != nil {
+        fmt.Printf("%s: %s (arrangement year: %d, off day: %t)\n", day.Date, day.Name, day.ArrangementYear, day.IsOffDay)
+    }
     isHoliday, name, err = holidaycn.IsRestDay(date)
     if err != nil {
         log.Fatal(err)
@@ -86,6 +91,7 @@ func main() {
 
 ## Functions
 
+- `CheckHoliday(time.Time) (*holiday.Day, error)`: Return a holiday or makeup workday record, `(nil, nil)` if absent, or `(nil, err)` if the year is unsupported. Uses the supplied date's timezone, without weekend fallback. `Day.ArrangementYear` records the original JSON's top-level `year`, including for merged cross-year entries.
 - `IsNowHoliday() (bool, string, error)`: Check if current time in China is a holiday
 - `IsNowRestDay() (bool, error)`: Check if current time in China is a rest day (holiday or weekend)
 - `IsRestDay(time.Time) (bool, string, error)`: Check if a given date is a rest day

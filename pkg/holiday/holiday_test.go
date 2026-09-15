@@ -8,7 +8,7 @@ import (
 
 func TestYearAPIsIncludeCrossYearRecords(t *testing.T) {
 	const date = "2018-12-29"
-	want := holiday.Day{Name: "元旦", Date: date, IsOffDay: false}
+	want := holiday.Day{ArrangementYear: 2019, Name: "元旦", Date: date, IsOffDay: false}
 	if got := holiday.GetYearData(2019)[date]; got != want {
 		t.Errorf("GetYearData(2019)[%q] = %+v, want %+v", date, got, want)
 	}

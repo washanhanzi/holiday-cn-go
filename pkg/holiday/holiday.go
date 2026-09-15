@@ -7,9 +7,11 @@ import (
 
 // Day represents a single holiday or workday entry
 type Day struct {
-	Name     string
-	Date     string
-	IsOffDay bool
+	// ArrangementYear is the original JSON arrangement year, which may differ from Date's year.
+	ArrangementYear int    `json:"arrangementYear"`
+	Name            string `json:"name"`
+	Date            string `json:"date"`
+	IsOffDay        bool   `json:"isOffDay"`
 }
 
 var (

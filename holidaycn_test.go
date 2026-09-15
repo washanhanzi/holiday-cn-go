@@ -4,7 +4,50 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/washanhanzi/holiday-cn-go/pkg/holiday"
 )
+
+func TestCheckHoliday(t *testing.T) {
+	tests := []struct {
+		date    string
+		want    *holiday.Day
+		wantErr string
+	}{
+		{"2025-01-01", &holiday.Day{ArrangementYear: 2025, Name: "元旦", Date: "2025-01-01", IsOffDay: true}, ""},
+		{"2018-12-29", &holiday.Day{ArrangementYear: 2019, Name: "元旦", Date: "2018-12-29", IsOffDay: false}, ""},
+		{"2025-01-02", nil, ""},
+		{"2025-01-04", nil, ""},
+		{"2006-12-30", nil, "no holiday data for year 2006"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.date, func(t *testing.T) {
+			date, err := time.Parse("2006-01-02", tt.date)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := CheckHoliday(date)
+			if tt.wantErr != "" {
+				if got != nil || err == nil || err.Error() != tt.wantErr {
+					t.Fatalf("CheckHoliday(%s) = (%+v, %v), want (nil, %q)", tt.date, got, err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tt.want == nil {
+				if got != nil {
+					t.Fatalf("CheckHoliday(%s) = %+v, want nil", tt.date, got)
+				}
+				return
+			}
+			if got == nil || *got != *tt.want {
+				t.Fatalf("CheckHoliday(%s) = %+v, want %+v", tt.date, got, tt.want)
+			}
+		})
+	}
+}
 
 func TestIsRestDay(t *testing.T) {
 	tests := []struct {

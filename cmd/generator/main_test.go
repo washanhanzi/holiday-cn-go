@@ -31,12 +31,12 @@ func TestGeneratedYearData(t *testing.T) {
 	}
 	// Deliberately visit later arrangement years first to test precedence.
 	fixtures := []Schema{
-		{Year: 2019, Days: []Day{
+		{Year: 2019, Days: []arrangementDay{
 			{Name: "New Year", Date: "2018-12-29", IsOffDay: false},
 			{Name: "New Year", Date: "2018-12-31", IsOffDay: true},
 			{Name: "New Year", Date: "2019-01-01", IsOffDay: true},
 		}},
-		{Year: 2018, Days: []Day{
+		{Year: 2018, Days: []arrangementDay{
 			{Name: "Superseded", Date: "2018-12-29", IsOffDay: true},
 			{Name: "Current arrangement", Date: "2018-01-03", IsOffDay: false},
 		}},
@@ -113,6 +113,14 @@ func TestCalendar(t *testing.T) {
 	if _, exists := holiday.GetYearData(2018)["2019-01-01"]; exists {
 		t.Error("2018 imported a date belonging to 2019")
 	}
+	for _, year := range []int{2018, 2019} {
+		if day := holiday.GetYearData(year)["2018-12-29"]; day.ArrangementYear != 2019 {
+			t.Errorf("year %d lost original arrangement year: %+v", year, day)
+		}
+	}
+	if day := holiday.GetYearData(2018)["2018-01-03"]; day.ArrangementYear != 2018 {
+		t.Errorf("incorrect arrangement year for original record: %+v", day)
+	}
 }
 `
 	if err := os.WriteFile(filepath.Join(root, "calendar_test.go"), []byte(testSource), 0644); err != nil {
@@ -130,7 +138,7 @@ func TestGenerateRejectsInvalidDate(t *testing.T) {
 	root := t.TempDir()
 	writeSchema(t, filepath.Join(root, "2019.json"), Schema{
 		Year: 2019,
-		Days: []Day{{Date: "2018-12-32"}},
+		Days: []arrangementDay{{Date: "2018-12-32"}},
 	})
 	err := generate(root, root)
 	if err == nil || !strings.Contains(err.Error(), "invalid date") {
