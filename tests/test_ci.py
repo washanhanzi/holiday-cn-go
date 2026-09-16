@@ -71,10 +71,15 @@ class UpdateDataTests(unittest.TestCase):
         shutil.copy2(ROOT / "go.mod", self.repo / "go.mod")
         shutil.copy2(ROOT / "holidaycn.go", self.repo / "holidaycn.go")
         shutil.copytree(ROOT / "cmd", self.repo / "cmd")
-        (self.repo / "pkg/holiday").mkdir(parents=True)
+        # The generator imports the public Day type from the existing package.
+        shutil.copytree(ROOT / "pkg/holiday", self.repo / "pkg/holiday")
+        generated = base / "generated"
+        generated.mkdir()
         self.command(
-            self.repo, "go", "run", "./cmd/generator", "holiday-cn", "pkg/holiday",
+            self.repo, "go", "run", "./cmd/generator", "holiday-cn", str(generated),
         )
+        shutil.rmtree(self.repo / "pkg/holiday")
+        shutil.move(str(generated), self.repo / "pkg/holiday")
         self.commit(self.repo)
 
     def update(self, check=True):
