@@ -283,3 +283,30 @@ func TestAfterWorkdays(t *testing.T) {
 		})
 	}
 }
+
+// Both public access paths must leave the cached record unchanged.
+func TestHolidayDataMutationIsolation(t *testing.T) {
+	date := time.Date(2025, 1, 1, 0, 0, 0, 0, cnLocation)
+	day, err := CheckHoliday(date)
+	if err != nil || day == nil {
+		t.Fatalf("CheckHoliday returned (%v, %v)", day, err)
+	}
+	want := *day
+	day.Name = "changed"
+	day.IsOffDay = false
+
+	data := holiday.GetYearData(2025)
+	delete(data, want.Date)
+	data["2025-01-02"] = want
+
+	got, err := CheckHoliday(date)
+	if err != nil || got == nil || *got != want {
+		t.Fatalf("caller mutation changed record: (%v, %v), want %v", got, err, want)
+	}
+	if got, err := CheckHoliday(date.AddDate(0, 0, 1)); err != nil || got != nil {
+		t.Fatalf("caller inserted a cached record: (%v, %v)", got, err)
+	}
+	if off, name, err := holiday.IsHoliday2025(want.Date); err != nil || !off || name != want.Name {
+		t.Fatalf("caller mutation affected year API: (%v, %q, %v)", off, name, err)
+	}
+}

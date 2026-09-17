@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,6 +32,7 @@ func TestGeneratedYearData(t *testing.T) {
 	}
 	// Deliberately visit later arrangement years first to test precedence.
 	fixtures := []Schema{
+		{Year: 2020, Days: []arrangementDay{}},
 		{Year: 2019, Days: []arrangementDay{
 			{Name: "New Year", Date: "2018-12-29", IsOffDay: false},
 			{Name: "New Year", Date: "2018-12-31", IsOffDay: true},
@@ -83,6 +85,12 @@ import (
 )
 
 func TestCalendar(t *testing.T) {
+	if data := holiday.GetYearData(2020); data != nil {
+		t.Errorf("empty source year returned %v, want nil", data)
+	}
+	if _, err := CheckHoliday(time.Date(2020, 1, 1, 0, 0, 0, 0, cnLocation)); err == nil {
+		t.Error("empty source year should be unsupported")
+	}
 	tests := []struct {
 		date string
 		off bool
@@ -143,5 +151,47 @@ func TestGenerateRejectsInvalidDate(t *testing.T) {
 	err := generate(root, root)
 	if err == nil || !strings.Contains(err.Error(), "invalid date") {
 		t.Fatalf("generate() = %v, want invalid date error", err)
+	}
+}
+
+func TestGenerateSkipsEmptyYears(t *testing.T) {
+	for _, source := range []string{
+		`{"year":2018,"days":[]}`,
+		`{"year":2018,"days":null}`,
+		`{"year":2018}`,
+	} {
+		t.Run(source, func(t *testing.T) {
+			root := t.TempDir()
+			path := filepath.Join(root, "2018.json")
+			writeSchema(t, path, Schema{Year: 2018, Days: []arrangementDay{{Date: "2018-01-01"}}})
+			if err := generate(root, root); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(filepath.Join(root, "year_2018.go")); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, []byte(source), 0644); err != nil {
+				t.Fatal(err)
+			}
+			// A neighboring year's cross-year entry must not revive an empty year.
+			writeSchema(t, filepath.Join(root, "2019.json"), Schema{
+				Year: 2019, Days: []arrangementDay{{Date: "2018-12-31"}},
+			})
+			for i := 0; i < 2; i++ {
+				if err := generate(root, root); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := os.Stat(filepath.Join(root, "year_2018.go")); !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("empty year file still exists or stat failed: %v", err)
+				}
+				registry, err := os.ReadFile(filepath.Join(root, "holiday.go"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if strings.Contains(string(registry), "Init2018") || !strings.Contains(string(registry), "Init2019") {
+					t.Fatal("registry must include only the nonempty year")
+				}
+			}
+		})
 	}
 }

@@ -48,7 +48,7 @@ func Init2024() map[string]Day {
 
 // IsHoliday2024 checks if a given date in 2024 is a holiday
 func IsHoliday2024(dateStr string) (bool, string, error) {
-	data := GetYearData(2024)
+	data := getYearData(2024)
 	if day, exists := data[dateStr]; exists {
 		return day.IsOffDay, day.Name, nil
 	}

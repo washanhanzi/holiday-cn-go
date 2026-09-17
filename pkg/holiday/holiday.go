@@ -2,7 +2,9 @@
 package holiday
 
 import (
+	"fmt"
 	"sync"
+	"time"
 )
 
 // Day represents a single holiday or workday entry
@@ -14,52 +16,74 @@ type Day struct {
 	IsOffDay        bool   `json:"isOffDay"`
 }
 
-var (
-	// yearDataCache stores initialized year data
-	yearDataCache sync.Map
+// lazyYearData builds a year's map once and publishes it to all callers.
+type lazyYearData struct {
+	once sync.Once
+	init func() map[string]Day
+	data map[string]Day
+}
 
-	// yearInitFuncs maps years to their initialization functions
-	yearInitFuncs = map[int]func() map[string]Day{
-		2007: Init2007,
-		2008: Init2008,
-		2009: Init2009,
-		2010: Init2010,
-		2011: Init2011,
-		2012: Init2012,
-		2013: Init2013,
-		2014: Init2014,
-		2015: Init2015,
-		2016: Init2016,
-		2017: Init2017,
-		2018: Init2018,
-		2019: Init2019,
-		2020: Init2020,
-		2021: Init2021,
-		2022: Init2022,
-		2023: Init2023,
-		2024: Init2024,
-		2025: Init2025,
-		2026: Init2026,
-		2027: Init2027,
-	}
-)
+// yearData contains independent initialization state for each supported year.
+var yearData = map[int]*lazyYearData{
+	2007: {init: Init2007},
+	2008: {init: Init2008},
+	2009: {init: Init2009},
+	2010: {init: Init2010},
+	2011: {init: Init2011},
+	2012: {init: Init2012},
+	2013: {init: Init2013},
+	2014: {init: Init2014},
+	2015: {init: Init2015},
+	2016: {init: Init2016},
+	2017: {init: Init2017},
+	2018: {init: Init2018},
+	2019: {init: Init2019},
+	2020: {init: Init2020},
+	2021: {init: Init2021},
+	2022: {init: Init2022},
+	2023: {init: Init2023},
+	2024: {init: Init2024},
+	2025: {init: Init2025},
+	2026: {init: Init2026},
+}
 
-// GetYearData returns the holiday data for a specific year, initializing it if necessary
+// GetYearData returns an independent copy of a year's holiday data.
+// Modifying the returned map does not affect subsequent holiday checks.
+// It returns nil for unsupported years.
 func GetYearData(year int) map[string]Day {
-	if data, ok := yearDataCache.Load(year); ok {
-		return data.(map[string]Day)
+	data := getYearData(year)
+	if data == nil {
+		return nil
 	}
+	result := make(map[string]Day, len(data))
+	for date, day := range data {
+		result[date] = day
+	}
+	return result
+}
 
-	// Check if we have an init function for this year
-	initFunc, ok := yearInitFuncs[year]
+// CheckHoliday returns a copy of the record for date, using its own timezone.
+// It returns (nil, nil) if no record exists, or an error for unsupported years.
+func CheckHoliday(date time.Time) (*Day, error) {
+	data := getYearData(date.Year())
+	if data == nil {
+		return nil, fmt.Errorf("no holiday data for year %d", date.Year())
+	}
+	day, exists := data[date.Format("2006-01-02")]
+	if !exists {
+		return nil, nil
+	}
+	return &day, nil
+}
+
+// getYearData initializes each year's private, read-only cache once.
+func getYearData(year int) map[string]Day {
+	entry, ok := yearData[year]
 	if !ok {
 		return nil
 	}
-
-	// Initialize the data
-	data := initFunc()
-	
-	// Store in cache
-	actualData, _ := yearDataCache.LoadOrStore(year, data)
-	return actualData.(map[string]Day)
+	entry.once.Do(func() {
+		entry.data = entry.init()
+	})
+	return entry.data
 }

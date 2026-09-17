@@ -97,3 +97,5 @@ func main() {
 - `IsRestDay(time.Time) (bool, string, error)`: Check if a given date is a rest day
 - `IsWorkday(time.Time) (bool, error)`: Check if a given date is a workday
 - `AfterWorkdays(time.Time, int) (time.Time, error)`: Get the next workday after counting N workdays from a given date
+
+Years whose source JSON has no day records are not generated or supported until data becomes available.
