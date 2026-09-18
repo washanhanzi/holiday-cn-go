@@ -1,101 +1,116 @@
 # holiday-cn-go
 
-Go package for checking Chinese holidays. Data is sourced from [holiday-cn](https://github.com/NateScarlet/holiday-cn).
+Check Chinese holidays, makeup workdays, and weekends in Go. Requires Go 1.16 or newer.
 
-## Go Version Support
+Holiday data comes from [holiday-cn](https://github.com/NateScarlet/holiday-cn) and
+is updated daily in this repository. Each year's data loads into memory when
+first used. The library does not download updates at runtime.
 
-Requires Go 1.16 or newer.
+## Quick start
 
-## Versioning
-
-Release tags use a UTC timestamp, such as `v0.4.20260914103045`
-(September 14, 2026 at 10:30:45 UTC).
-
-## Automatic Data Updates
-
-Holiday data is updated automatically each day.
-
-## Code Organization
-
-- `holidaycn.go`: Main API for checking holidays and workdays
-- `pkg/holiday/*.go`: Generated code containing holiday data and initialization
-
-## Generate Code
-
-To generate the holiday data code:
-
-```bash
-go run cmd/generator/main.go holiday-cn pkg/holiday
+```sh
+go get github.com/washanhanzi/holiday-cn-go
 ```
 
-## Usage
-
 ```go
-import "github.com/washanhanzi/holiday-cn-go"
+package main
+
+import (
+    "fmt"
+    "log"
+    "time"
+
+    "github.com/washanhanzi/holiday-cn-go"
+)
 
 func main() {
-    // Check current time in China
-    isHoliday, name, err := holidaycn.IsNowHoliday()
+    date := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+    off, name, err := holidaycn.IsRestDay(date)
     if err != nil {
         log.Fatal(err)
     }
-    if isHoliday {
-        fmt.Printf("Current time in China is a holiday: %s\n", name)
-    }
-
-    // Check if current time in China is a rest day (holiday or weekend)
-    isRest, err := holidaycn.IsNowRestDay()
-    if err != nil {
-        log.Fatal(err)
-    }
-    if isRest {
-        fmt.Println("Current time in China is a rest day")
-    }
-
-    // Check a specific date
-    date := time.Date(2024, 2, 10, 0, 0, 0, 0, time.UTC)
-    day, err := holidaycn.CheckHoliday(date)
-    if err != nil {
-        log.Fatal(err)
-    }
-    if day != nil {
-        fmt.Printf("%s: %s (arrangement year: %d, off day: %t)\n", day.Date, day.Name, day.ArrangementYear, day.IsOffDay)
-    }
-    isHoliday, name, err = holidaycn.IsRestDay(date)
-    if err != nil {
-        log.Fatal(err)
-    }
-    if isHoliday {
-        fmt.Printf("%s is a rest day: %s\n", date.Format("2006-01-02"), name)
-    }
-
-    // Check if a specific date is a workday
-    isWorkday, err = holidaycn.IsWorkday(date)
-    if err != nil {
-        log.Fatal(err)
-    }
-    if isWorkday {
-        fmt.Printf("%s is a workday\n", date.Format("2006-01-02"))
-    }
-
-    // Get the next workday after counting 2 workdays from a specific date
-    date = time.Date(2024, 2, 10, 0, 0, 0, 0, time.UTC)
-    nextWorkday, err := holidaycn.AfterWorkdays(date, 2)
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Printf("Next workday after counting 2 workdays from %s is %s\n",
-        date.Format("2006-01-02"), nextWorkday.Format("2006-01-02"))
+    fmt.Println(off, name) // true 元旦
 }
 ```
 
+`IsRestDay` checks holiday and makeup workday records first. If there is no
+record, Saturday and Sunday are rest days; Monday through Friday are workdays.
+Queries for unsupported years return an error, even for weekends.
+
+Functions that accept `time.Time` use its calendar date in its own timezone.
+They do not convert it to China time. The `IsNow…` functions use China time (UTC+8).
+
 ## Functions
 
-- `CheckHoliday(time.Time) (*holiday.Day, error)`: Return a holiday or makeup workday record, `(nil, nil)` if absent, or `(nil, err)` if the year is unsupported. Uses the supplied date's timezone, without weekend fallback. `Day.ArrangementYear` records the original JSON's top-level `year`, including for merged cross-year entries.
-- `IsNowHoliday() (bool, string, error)`: Check if current time in China is a holiday
-- `IsNowRestDay() (bool, error)`: Check if current time in China is a rest day (holiday or weekend)
-- `IsRestDay(time.Time) (bool, string, error)`: Check if a given date is a rest day
-- `IsWorkday(time.Time) (bool, error)`: Check if a given date is a workday
-- `AfterWorkdays(time.Time, int) (time.Time, error)`: Get the next workday after counting N workdays from a given date
+| Function | What it does |
+| --- | --- |
+| `CheckHoliday(date)` | Returns a `*holiday.Day`, or `nil` when no record exists. Does not apply weekend rules. |
+| `IsRestDay(date)` | Returns whether the date is a rest day, its holiday name (if any), and an error. |
+| `IsWorkday(date)` | Returns whether the date is a workday and an error. |
+| `IsNowRestDay()` | Checks whether today in China is a rest day. |
+| `IsNowHoliday()` | Like `IsNowRestDay`, but also returns the holiday name. Includes regular weekends. |
+| `AfterWorkdays(date, n)` | Skips `n` workdays after the date, then returns the following workday. Use `0` for the next workday. |
+| `MutateDay("YYYY-MM-DD", callback)` | Adds or updates one cached day. |
 
-Years whose source JSON has no day records are not generated or supported until data becomes available.
+A `holiday.Day` contains `Date`, `Name`, `IsOffDay`, and `ArrangementYear`.
+`ArrangementYear` identifies the original holiday arrangement's year, which can
+differ from the date's year when an arrangement spans New Year.
+
+## Customize a day
+
+Use `MutateDay` to add a company holiday or override an existing record. Import
+`github.com/washanhanzi/holiday-cn-go/pkg/holiday` for the `holiday.Day` type.
+
+```go
+err := holidaycn.MutateDay("2025-01-02", func(day *holiday.Day) {
+    day.Name = "Company holiday"
+    day.IsOffDay = true
+})
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+The year loads automatically before your callback runs. If the day already
+exists, you get its current values. Otherwise, you get these defaults:
+
+```go
+holiday.Day{
+    Date:            "2025-01-02",
+    ArrangementYear: 2025,
+    Name:            "",
+    IsOffDay:        false,
+}
+```
+
+Set the fields you want to change; the record is saved when your callback
+returns. The date string has no timezone conversion. Invalid dates, unsupported
+years, nil callbacks, or changes to `day.Date` return an error without saving.
+
+Changes affect subsequent holiday checks and workday calculations in the running
+process. They are not saved to disk. Only the selected year's cache changes,
+including its `holiday.IsHolidayYYYY` lookups; copies of the same date in other
+years' caches stay unchanged. `MutateDay` is also available in the `holiday` package.
+
+Concurrent updates to the same year run one at a time. Readers see the old or
+new data, never a partial update. Inside the callback, you may read the cache,
+but must not call `MutateDay` again or continue editing from another goroutine
+after returning. Changing a saved pointer later will not update the cache.
+If the callback panics, its changes are discarded and the panic propagates.
+
+## Development
+
+- `holidaycn.go` contains the public helpers.
+- `pkg/holiday/` contains generated data and cache APIs.
+- `cmd/generator/` contains the generator. Edit its templates to change generated code.
+
+Regenerate data from the local `holiday-cn` directory:
+
+```sh
+go run cmd/generator/main.go holiday-cn pkg/holiday
+```
+
+Years with no source records are not generated or supported.
+
+Release tags use a UTC timestamp. For example, `v0.4.20260914103045` represents
+September 14, 2026 at 10:30:45 UTC.

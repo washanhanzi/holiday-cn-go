@@ -39,6 +39,19 @@ func CheckHoliday(date time.Time) (*holiday.Day, error) {
 	return holiday.CheckHoliday(date)
 }
 
+// MutateDay initializes the date's year and lets mutate update a single record.
+// dateStr must be a valid YYYY-MM-DD calendar date; no timezone conversion is
+// performed. Missing records start with Date and
+// ArrangementYear set from date, and other fields zeroed. Changes are published
+// atomically and affect only this year's cache. The callback must not change Date
+// or call MutateDay, and must finish writing before returning. It may read the
+// cache. Retaining the pointer cannot change the cache afterward. A panic
+// discards changes and propagates. Invalid dates, unsupported years, nil
+// callbacks, and changes to Date return an error.
+func MutateDay(dateStr string, mutate func(*holiday.Day)) error {
+	return holiday.MutateDay(dateStr, mutate)
+}
+
 // IsRestDay checks if a given date is either a holiday or weekend.
 // Only years with nonempty source JSON day records are supported; other years return an error,
 // even if their dates appear in a supported year's cross-year arrangements.

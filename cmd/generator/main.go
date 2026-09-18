@@ -75,9 +75,11 @@ type Day struct {
 
 // lazyYearData builds a year's map once and publishes it to all callers.
 type lazyYearData struct {
-	once sync.Once
-	init func() map[string]Day
-	data map[string]Day
+	once     sync.Once
+	mutation sync.Mutex
+	mu       sync.RWMutex
+	init     func() map[string]Day
+	data     map[string]Day
 }
 
 // yearData contains independent initialization state for each supported year.
@@ -95,6 +97,10 @@ func GetYearData(year int) map[string]Day {
 	if data == nil {
 		return nil
 	}
+	return cloneYearData(data)
+}
+
+func cloneYearData(data map[string]Day) map[string]Day {
 	result := make(map[string]Day, len(data))
 	for date, day := range data {
 		result[date] = day
@@ -116,7 +122,53 @@ func CheckHoliday(date time.Time) (*Day, error) {
 	return &day, nil
 }
 
-// getYearData initializes each year's private, read-only cache once.
+// MutateDay initializes the date's year and passes a private copy of its record
+// to mutate. dateStr must be a valid YYYY-MM-DD calendar date; no timezone
+// conversion is performed. Missing records
+// start with Date and ArrangementYear set from date, and other fields zeroed.
+// Changes are published atomically on return and affect only this year's cache.
+// The callback must not change Date or call MutateDay. It may read the cache.
+// It must finish writing before returning; retaining the pointer cannot change
+// the cache afterward. A panic discards changes and propagates to the caller.
+// Invalid dates, unsupported years, nil callbacks, and changes to Date return an error.
+func MutateDay(dateStr string, mutate func(*Day)) error {
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return fmt.Errorf("invalid date %q: expected YYYY-MM-DD: %w", dateStr, err)
+	}
+	if date.Format("2006-01-02") != dateStr {
+		return fmt.Errorf("invalid date %q: expected YYYY-MM-DD", dateStr)
+	}
+	year := date.Year()
+	entry, ok := yearData[year]
+	if !ok {
+		return fmt.Errorf("no holiday data for year %d", year)
+	}
+	if mutate == nil {
+		return fmt.Errorf("mutate callback must not be nil")
+	}
+	entry.mutation.Lock()
+	defer entry.mutation.Unlock()
+
+	data := getYearData(year)
+	key := dateStr
+	day, exists := data[key]
+	if !exists {
+		day = Day{Date: key, ArrangementYear: year}
+	}
+	mutate(&day)
+	if day.Date != key {
+		return fmt.Errorf("mutate callback must not change Date from %s", key)
+	}
+	updated := cloneYearData(data)
+	updated[key] = day
+	entry.mu.Lock()
+	entry.data = updated
+	entry.mu.Unlock()
+	return nil
+}
+
+// getYearData initializes each year's cache once and returns an immutable snapshot.
 func getYearData(year int) map[string]Day {
 	entry, ok := yearData[year]
 	if !ok {
@@ -125,6 +177,8 @@ func getYearData(year int) map[string]Day {
 	entry.once.Do(func() {
 		entry.data = entry.init()
 	})
+	entry.mu.RLock()
+	defer entry.mu.RUnlock()
 	return entry.data
 }`
 

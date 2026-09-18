@@ -310,3 +310,34 @@ func TestHolidayDataMutationIsolation(t *testing.T) {
 		t.Fatalf("caller mutation affected year API: (%v, %q, %v)", off, name, err)
 	}
 }
+
+func TestMutateDayAffectsLookups(t *testing.T) {
+	date := time.Date(2025, 1, 1, 0, 0, 0, 0, cnLocation)
+	original, err := CheckHoliday(date)
+	if err != nil || original == nil {
+		t.Fatalf("original record = (%v, %v)", original, err)
+	}
+	t.Cleanup(func() {
+		if err := MutateDay("2025-01-01", func(day *holiday.Day) { *day = *original }); err != nil {
+			t.Error(err)
+		}
+	})
+	if err := MutateDay("2025-01-01", func(day *holiday.Day) {
+		day.Name = "Company workday"
+		day.IsOffDay = false
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if off, name, err := IsRestDay(date); err != nil || off || name != "Company workday" {
+		t.Fatalf("IsRestDay = (%v, %q, %v)", off, name, err)
+	}
+	if work, err := IsWorkday(date); err != nil || !work {
+		t.Fatalf("IsWorkday = (%v, %v)", work, err)
+	}
+	if off, name, err := holiday.IsHoliday2025("2025-01-01"); err != nil || off || name != "Company workday" {
+		t.Fatalf("year lookup = (%v, %q, %v)", off, name, err)
+	}
+	if got, err := AfterWorkdays(date.AddDate(0, 0, -1), 0); err != nil || !got.Equal(date) {
+		t.Fatalf("AfterWorkdays = (%v, %v)", got, err)
+	}
+}
