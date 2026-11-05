@@ -47,6 +47,7 @@ var yearData = map[int]*lazyYearData{
 	2024: {init: Init2024},
 	2025: {init: Init2025},
 	2026: {init: Init2026},
+	2027: {init: Init2027},
 }
 
 // GetYearData returns an independent copy of a year's holiday data.
